@@ -76,3 +76,5 @@ temp/
 
 # Dataset (uncomment if too large)
 # dataset/raw/
+
+.claude/

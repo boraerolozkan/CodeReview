@@ -1,210 +1,240 @@
 ---
-base_model: unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit
+language:
+- en
+license: mit
 library_name: peft
-pipeline_tag: text-generation
 tags:
-- base_model:adapter:unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit
+- code-review
+- code-analysis
+- security
+- bug-detection
+- vulnerability-detection
+- qwen2
 - lora
+- unsloth
 - sft
 - transformers
 - trl
-- unsloth
+base_model: unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit
+pipeline_tag: text-generation
+datasets:
+- custom
+model-index:
+- name: codereview-ai
+  results: []
 ---
 
-# Model Card for Model ID
+<div align="center">
 
-<!-- Provide a quick summary of what the model is/does. -->
+# CodeReview AI
 
+**Automated Code Review with Fine-tuned LLMs**
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/boraoxkan/CodeReview)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Base Model](https://img.shields.io/badge/Base-Qwen2.5--Coder--7B-purple)](https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct)
+
+</div>
+
+---
+
+## Overview
+
+A fine-tuned code review model that automatically detects **bugs**, **security vulnerabilities**, and **code quality issues** across multiple programming languages.
+
+### Key Features
+
+- **Multi-Language**: Python, JavaScript, Java, C++, Go, Rust, TypeScript, C#, SQL
+- **Security Focus**: Detects OWASP Top 10 vulnerabilities
+- **Quality Scoring**: 0-100 score with explanations
+- **Auto-Fix**: Provides corrected code snippets
+- **Efficient**: 4-bit quantization, runs on 8GB VRAM
+
+---
 
 ## Model Details
 
-### Model Description
+| Property | Value |
+|----------|-------|
+| **Base Model** | Qwen2.5-Coder-7B-Instruct |
+| **Parameters** | 7B |
+| **Fine-tuning** | LoRA (r=16, alpha=16) |
+| **Quantization** | 4-bit NF4 |
+| **Context Length** | 2048 tokens |
+| **Framework** | Unsloth + TRL |
+
+---
+
+## Detected Issues
+
+<table>
+<tr>
+<td>
+
+**Security**
+- SQL Injection
+- Cross-Site Scripting (XSS)
+- Command Injection
+- Hardcoded Credentials
+- Path Traversal
+- Insecure Deserialization
+
+</td>
+<td>
+
+**Code Quality**
+- Memory Leaks
+- Race Conditions
+- Null Pointer Dereference
+- Off-by-One Errors
+- Resource Leaks
+- Infinite Loops
+
+</td>
+</tr>
+</table>
+
+---
+
+## Quick Start
+
+```python
+from unsloth import FastLanguageModel
+
+# Load model
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="boraoxkan/codereview-ai",
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+FastLanguageModel.for_inference(model)
+
+# Analyze code
+prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+### Instruction:
+Analyze this Python code for defects.
+
+### Input:
+def get_user(username):
+    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    cursor.execute(query)
+    return cursor.fetchone()
+
+### Response:
+"""
+
+inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+outputs = model.generate(**inputs, max_new_tokens=512, temperature=0.1)
+result = tokenizer.decode(outputs[0])
+```
+
+---
+
+## Example Output
+
+**Input Code (SQL Injection vulnerability):**
+```python
+def get_user(username):
+    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    cursor.execute(query)
+```
+
+**Model Output:**
+```json
+{
+  "code_quality_score": 20,
+  "critical_issues": [
+    "SQL Injection vulnerability due to direct string concatenation"
+  ],
+  "suggestions": [
+    "Use parameterized queries to prevent SQL injection",
+    "Handle database connections properly"
+  ],
+  "fixed_code": "def get_user(username):\n    query = \"SELECT * FROM users WHERE username = ?\"\n    cursor.execute(query, (username,))"
+}
+```
+
+---
 
-<!-- Provide a longer summary of what this model is. -->
+## Score Guidelines
 
+| Score | Level | Description |
+|:-----:|:-----:|-------------|
+| 0-30 | **Critical** | Severe security vulnerabilities |
+| 31-50 | **Poor** | Significant issues present |
+| 51-70 | **Fair** | Some improvements needed |
+| 71-85 | **Good** | Minor issues only |
+| 86-100 | **Excellent** | Clean, secure code |
 
+---
 
-- **Developed by:** [More Information Needed]
-- **Funded by [optional]:** [More Information Needed]
-- **Shared by [optional]:** [More Information Needed]
-- **Model type:** [More Information Needed]
-- **Language(s) (NLP):** [More Information Needed]
-- **License:** [More Information Needed]
-- **Finetuned from model [optional]:** [More Information Needed]
+## Training
 
-### Model Sources [optional]
+| Parameter | Value |
+|-----------|-------|
+| Dataset | ~500 synthetic samples |
+| Steps | 120 |
+| Batch Size | 1 (effective: 4) |
+| Learning Rate | 2e-4 |
+| Optimizer | AdamW 8-bit |
+| Precision | BF16 |
+| Hardware | RTX 3070 (8GB) |
+| Time | ~40 minutes |
 
-<!-- Provide the basic links for the model. -->
+### LoRA Config
 
-- **Repository:** [More Information Needed]
-- **Paper [optional]:** [More Information Needed]
-- **Demo [optional]:** [More Information Needed]
+```python
+r = 16
+lora_alpha = 16
+lora_dropout = 0
+target_modules = [
+    "q_proj", "k_proj", "v_proj", "o_proj",
+    "gate_proj", "up_proj", "down_proj"
+]
+```
 
-## Uses
+---
 
-<!-- Address questions around how the model is intended to be used, including the foreseeable users of the model and those affected by the model. -->
+## Limitations
 
-### Direct Use
+- Context limited to 2048 tokens
+- Optimized for single-function analysis
+- May produce false positives for complex patterns
+- Training data is synthetically generated
 
-<!-- This section is for the model use without fine-tuning or plugging into a larger ecosystem/app. -->
+---
 
-[More Information Needed]
+## Links
 
-### Downstream Use [optional]
+| Resource | Link |
+|----------|------|
+| GitHub Repository | [boraoxkan/CodeReview](https://github.com/boraoxkan/CodeReview) |
+| Base Model | [Qwen2.5-Coder-7B](https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct) |
+| Unsloth | [unslothai/unsloth](https://github.com/unslothai/unsloth) |
 
-<!-- This section is for the model use when fine-tuned for a task, or when plugged into a larger ecosystem/app -->
+---
 
-[More Information Needed]
+## Citation
 
-### Out-of-Scope Use
+```bibtex
+@software{codereview_ai_2025,
+  title = {CodeReview AI: Automated Code Analysis with Fine-tuned LLMs},
+  author = {Bora Ozkan},
+  year = {2025},
+  url = {https://huggingface.co/boraoxkan/codereview-ai}
+}
+```
 
-<!-- This section addresses misuse, malicious use, and uses that the model will not work well for. -->
+---
 
-[More Information Needed]
+## License
 
-## Bias, Risks, and Limitations
+MIT License - See [LICENSE](https://github.com/boraoxkan/CodeReview/blob/main/LICENSE) for details.
 
-<!-- This section is meant to convey both technical and sociotechnical limitations. -->
+---
 
-[More Information Needed]
-
-### Recommendations
-
-<!-- This section is meant to convey recommendations with respect to the bias, risk, and technical limitations. -->
-
-Users (both direct and downstream) should be made aware of the risks, biases and limitations of the model. More information needed for further recommendations.
-
-## How to Get Started with the Model
-
-Use the code below to get started with the model.
-
-[More Information Needed]
-
-## Training Details
-
-### Training Data
-
-<!-- This should link to a Dataset Card, perhaps with a short stub of information on what the training data is all about as well as documentation related to data pre-processing or additional filtering. -->
-
-[More Information Needed]
-
-### Training Procedure
-
-<!-- This relates heavily to the Technical Specifications. Content here should link to that section when it is relevant to the training procedure. -->
-
-#### Preprocessing [optional]
-
-[More Information Needed]
-
-
-#### Training Hyperparameters
-
-- **Training regime:** [More Information Needed] <!--fp32, fp16 mixed precision, bf16 mixed precision, bf16 non-mixed precision, fp16 non-mixed precision, fp8 mixed precision -->
-
-#### Speeds, Sizes, Times [optional]
-
-<!-- This section provides information about throughput, start/end time, checkpoint size if relevant, etc. -->
-
-[More Information Needed]
-
-## Evaluation
-
-<!-- This section describes the evaluation protocols and provides the results. -->
-
-### Testing Data, Factors & Metrics
-
-#### Testing Data
-
-<!-- This should link to a Dataset Card if possible. -->
-
-[More Information Needed]
-
-#### Factors
-
-<!-- These are the things the evaluation is disaggregating by, e.g., subpopulations or domains. -->
-
-[More Information Needed]
-
-#### Metrics
-
-<!-- These are the evaluation metrics being used, ideally with a description of why. -->
-
-[More Information Needed]
-
-### Results
-
-[More Information Needed]
-
-#### Summary
-
-
-
-## Model Examination [optional]
-
-<!-- Relevant interpretability work for the model goes here -->
-
-[More Information Needed]
-
-## Environmental Impact
-
-<!-- Total emissions (in grams of CO2eq) and additional considerations, such as electricity usage, go here. Edit the suggested text below accordingly -->
-
-Carbon emissions can be estimated using the [Machine Learning Impact calculator](https://mlco2.github.io/impact#compute) presented in [Lacoste et al. (2019)](https://arxiv.org/abs/1910.09700).
-
-- **Hardware Type:** [More Information Needed]
-- **Hours used:** [More Information Needed]
-- **Cloud Provider:** [More Information Needed]
-- **Compute Region:** [More Information Needed]
-- **Carbon Emitted:** [More Information Needed]
-
-## Technical Specifications [optional]
-
-### Model Architecture and Objective
-
-[More Information Needed]
-
-### Compute Infrastructure
-
-[More Information Needed]
-
-#### Hardware
-
-[More Information Needed]
-
-#### Software
-
-[More Information Needed]
-
-## Citation [optional]
-
-<!-- If there is a paper or blog post introducing the model, the APA and Bibtex information for that should go in this section. -->
-
-**BibTeX:**
-
-[More Information Needed]
-
-**APA:**
-
-[More Information Needed]
-
-## Glossary [optional]
-
-<!-- If relevant, include terms and calculations in this section that can help readers understand the model or model card. -->
-
-[More Information Needed]
-
-## More Information [optional]
-
-[More Information Needed]
-
-## Model Card Authors [optional]
-
-[More Information Needed]
-
-## Model Card Contact
-
-[More Information Needed]
-### Framework versions
-
-- PEFT 0.18.0
+<div align="center">
+<b>Built with Unsloth & Qwen2.5-Coder</b><br>
+<sub>Making code reviews smarter, one bug at a time.</sub>
+</div>

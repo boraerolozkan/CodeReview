@@ -384,9 +384,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```bibtex
 @software{codereview_ai,
   title = {CodeReview AI: Automated Code Analysis with Fine-tuned LLMs},
-  author = {Your Name},
+  author = {Bora Erol Ozkan},
   year = {2025},
-  url = {https://github.com/yourusername/CodeReview}
+  url = {https://github.com/boraerolozkan/CodeReview}
 }
 ```
 
